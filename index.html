@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WhatsApp Simulator</title>
+  <link rel="icon" type="image/svg+xml" href="assets/default-avatar.svg" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/whatsapp.css" />
+</head>
+<body class="view-config">
+
+  <!-- ============================= -->
+  <!-- VISTA: CONFIGURAZIONE         -->
+  <!-- ============================= -->
+  <main id="configView" class="config-view">
+    <div class="config-container">
+      <header class="config-header">
+        <h1>WhatsApp Simulator</h1>
+        <p class="subtitle">Configura la conversazione, poi premi <strong>Avvia simulazione</strong>.</p>
+      </header>
+
+      <section class="card">
+        <h2>Contatto</h2>
+        <div class="contact-grid">
+          <div class="avatar-uploader">
+            <label for="avatarInput" class="avatar-preview" id="avatarPreview" title="Clicca per cambiare avatar">
+              <img id="avatarImg" src="assets/default-avatar.svg" alt="Avatar contatto" />
+              <span class="avatar-overlay">Cambia</span>
+            </label>
+            <input type="file" id="avatarInput" accept="image/*" hidden />
+            <button type="button" id="avatarResetBtn" class="link-btn">Rimuovi</button>
+          </div>
+          <div class="contact-fields">
+            <label class="field">
+              <span>Nome contatto</span>
+              <input type="text" id="contactName" placeholder="Es. Mario Rossi" maxlength="60" />
+            </label>
+            <label class="field">
+              <span>Stato (sotto al nome)</span>
+              <input type="text" id="contactStatus" placeholder="online" maxlength="80" />
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-head">
+          <h2>Messaggi</h2>
+          <div class="card-actions">
+            <button type="button" id="addMessageBtn" class="btn btn-secondary">+ Aggiungi messaggio</button>
+          </div>
+        </div>
+        <ol id="messagesList" class="messages-list" aria-label="Lista messaggi"></ol>
+        <p class="help-text">
+          L'ordine dall'alto verso il basso è l'ordine in cui i messaggi compaiono nella simulazione.
+          Usa le frecce per riordinare.
+        </p>
+      </section>
+
+      <section class="card actions-card">
+        <div class="actions-row">
+          <button type="button" id="startBtn" class="btn btn-primary btn-large">Avvia simulazione</button>
+          <button type="button" id="exportBtn" class="btn btn-ghost">Esporta JSON</button>
+          <button type="button" id="importBtn" class="btn btn-ghost">Importa JSON</button>
+          <input type="file" id="importInput" accept="application/json" hidden />
+          <button type="button" id="resetAllBtn" class="btn btn-ghost danger">Ripristina esempio</button>
+        </div>
+        <p id="configStatus" class="config-status" aria-live="polite"></p>
+      </section>
+    </div>
+  </main>
+
+  <!-- ============================= -->
+  <!-- VISTA: SIMULATORE             -->
+  <!-- ============================= -->
+  <section id="simulatorView" class="simulator-view" aria-hidden="true">
+    <div class="sim-toolbar">
+      <button type="button" id="backToConfigBtn" class="btn btn-ghost on-dark">← Modifica configurazione</button>
+      <button type="button" id="restartBtn" class="btn btn-ghost on-dark">↻ Riavvia</button>
+      <span class="sim-hint">Usa <kbd>←</kbd> <kbd>→</kbd> per navigare la conversazione (o clicca sull'iPhone)</span>
+    </div>
+
+    <div class="iphone-wrapper">
+      <div class="iphone" id="iphone">
+        <div class="iphone-side iphone-side--left"></div>
+        <div class="iphone-side iphone-side--right"></div>
+        <div class="iphone-frame">
+          <div class="iphone-screen">
+
+            <!-- Status bar iOS -->
+            <div class="ios-status-bar">
+              <span class="ios-time" id="iosTime">9:41</span>
+              <div class="dynamic-island"></div>
+              <div class="ios-status-right">
+                <span class="ios-signal" aria-hidden="true">
+                  <span></span><span></span><span></span><span></span>
+                </span>
+                <svg class="ios-wifi" viewBox="0 0 16 12" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" aria-hidden="true">
+                  <circle cx="8" cy="10.5" r="1" fill="currentColor" stroke="none" />
+                  <path d="M5.83 9.25 A2.5 2.5 0 0 1 10.17 9.25" />
+                  <path d="M4.1 8.25 A4.5 4.5 0 0 1 11.9 8.25" />
+                  <path d="M2.37 7.25 A6.5 6.5 0 0 1 13.63 7.25" />
+                </svg>
+                <span class="ios-battery" aria-hidden="true"></span>
+              </div>
+            </div>
+
+            <!-- WhatsApp header -->
+            <header class="wa-header">
+              <button class="wa-back" aria-label="Indietro">‹</button>
+              <img id="waAvatar" class="wa-avatar" src="assets/default-avatar.svg" alt="Avatar" />
+              <div class="wa-contact">
+                <span class="wa-name" id="waName">Contatto</span>
+                <span class="wa-status" id="waStatus">online</span>
+              </div>
+              <div class="wa-actions">
+                <span class="wa-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M17 10.5V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 4v-11l-4 4z"/></svg>
+                </span>
+                <span class="wa-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M20 15.5c-1.2 0-2.4-.2-3.6-.6-.3-.1-.7 0-1 .2l-2.2 2.2c-2.8-1.5-5.2-3.8-6.6-6.6l2.2-2.2c.3-.3.4-.7.2-1-.4-1.1-.6-2.3-.6-3.5 0-.6-.4-1-1-1H4c-.6 0-1 .4-1 1 0 9.4 7.6 17 17 17 .6 0 1-.4 1-1v-3.5c0-.6-.4-1-1-1z"/></svg>
+                </span>
+                <span class="wa-icon" aria-hidden="true">⋮</span>
+              </div>
+            </header>
+
+            <!-- Messages area -->
+            <div class="wa-chat" id="waChat">
+              <div class="wa-date-pill">Oggi</div>
+              <div class="wa-messages" id="waMessages"></div>
+            </div>
+
+            <!-- Input bar -->
+            <div class="wa-input-bar" id="waInputBar">
+              <button class="wa-input-icon" aria-label="Emoji">
+                <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm-3.5 7a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zm7 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zM12 18a5.5 5.5 0 0 1-5-3h10a5.5 5.5 0 0 1-5 3z"/></svg>
+              </button>
+              <div class="wa-input-field">
+                <span class="wa-input-text" id="waInputText"></span>
+                <span class="wa-input-caret" id="waInputCaret">|</span>
+                <span class="wa-input-placeholder" id="waInputPlaceholder">Messaggio</span>
+                <button class="wa-input-icon wa-input-attach" aria-label="Allega">
+                  <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M16.5 6v11.5a4.5 4.5 0 0 1-9 0V5a3 3 0 0 1 6 0v11.5a1.5 1.5 0 0 1-3 0V6H9v10.5a3 3 0 0 0 6 0V5a4.5 4.5 0 0 0-9 0v12.5a6 6 0 0 0 12 0V6h-1.5z"/></svg>
+                </button>
+              </div>
+              <button class="wa-send-btn" id="waSendBtn" aria-label="Invia">
+                <svg class="wa-send-mic" viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/></svg>
+                <svg class="wa-send-arrow" viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
+              </button>
+            </div>
+
+            <!-- iOS Keyboard -->
+            <div class="ios-keyboard" id="iosKeyboard" aria-hidden="true">
+              <div class="kb-row" data-row="1">
+                <button class="kb-key" data-key="q">q</button>
+                <button class="kb-key" data-key="w">w</button>
+                <button class="kb-key" data-key="e">e</button>
+                <button class="kb-key" data-key="r">r</button>
+                <button class="kb-key" data-key="t">t</button>
+                <button class="kb-key" data-key="y">y</button>
+                <button class="kb-key" data-key="u">u</button>
+                <button class="kb-key" data-key="i">i</button>
+                <button class="kb-key" data-key="o">o</button>
+                <button class="kb-key" data-key="p">p</button>
+              </div>
+              <div class="kb-row" data-row="2">
+                <button class="kb-key" data-key="a">a</button>
+                <button class="kb-key" data-key="s">s</button>
+                <button class="kb-key" data-key="d">d</button>
+                <button class="kb-key" data-key="f">f</button>
+                <button class="kb-key" data-key="g">g</button>
+                <button class="kb-key" data-key="h">h</button>
+                <button class="kb-key" data-key="j">j</button>
+                <button class="kb-key" data-key="k">k</button>
+                <button class="kb-key" data-key="l">l</button>
+              </div>
+              <div class="kb-row" data-row="3">
+                <button class="kb-key kb-key--util" data-key="shift">⇧</button>
+                <button class="kb-key" data-key="z">z</button>
+                <button class="kb-key" data-key="x">x</button>
+                <button class="kb-key" data-key="c">c</button>
+                <button class="kb-key" data-key="v">v</button>
+                <button class="kb-key" data-key="b">b</button>
+                <button class="kb-key" data-key="n">n</button>
+                <button class="kb-key" data-key="m">m</button>
+                <button class="kb-key kb-key--util" data-key="backspace">⌫</button>
+              </div>
+              <div class="kb-row" data-row="4">
+                <button class="kb-key kb-key--util kb-key--num" data-key="123">123</button>
+                <button class="kb-key kb-key--util" data-key="emoji">☺</button>
+                <button class="kb-key kb-key--space" data-key="space">spazio</button>
+                <button class="kb-key kb-key--util kb-key--return" data-key="return">invio</button>
+              </div>
+              <div class="kb-homebar"></div>
+            </div>
+
+            <!-- Click-anywhere overlay (catches taps on the iPhone screen to advance) -->
+            <div class="sim-tap-overlay" id="simTapOverlay" aria-label="Tocca per avanzare"></div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script src="js/storage.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/simulator.js"></script>
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      WAStorage.ensureSeed();
+      WAConfig.init();
+      WASimulator.init();
+    });
+  </script>
+</body>
+</html>
