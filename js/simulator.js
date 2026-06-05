@@ -73,7 +73,7 @@
 
   function onKeyNav(e) {
     if (!document.body.classList.contains('view-simulator')) return;
-    // Don't hijack arrow keys if user is focused in an input/textarea/contenteditable
+    // Don't hijack keys if user is focused in an input/textarea/contenteditable
     const t = e.target;
     if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
     if (e.key === 'ArrowRight') {
@@ -82,6 +82,16 @@
     } else if (e.key === 'ArrowLeft') {
       e.preventDefault();
       stepBack();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      if (global.WAConfig && typeof global.WAConfig.exitSimulator === 'function') {
+        global.WAConfig.exitSimulator();
+      }
+    } else if (e.key === 'r' || e.key === 'R') {
+      e.preventDefault();
+      if (!messages.length) return;
+      stop();
+      start({ contact: currentContact(), messages });
     }
   }
 
@@ -193,23 +203,55 @@
     waStatus.classList.remove('typing');
   }
 
-  function addBubble(sender, text) {
+  function addBubble(sender, msg) {
     const bubble = document.createElement('div');
     bubble.className = `wa-bubble ${sender}`;
-    bubble.appendChild(document.createTextNode(text));
+
     const meta = document.createElement('span');
     meta.className = 'wa-meta';
     meta.textContent = nowTimeShort();
+    let ticks = null;
     if (sender === 'me') {
-      const ticks = document.createElement('span');
+      ticks = document.createElement('span');
       ticks.className = 'wa-ticks';
       ticks.textContent = '✓';
       meta.appendChild(ticks);
+    }
+
+    if (msg.imageDataUrl) {
+      bubble.classList.add('has-image');
+      const imgWrap = document.createElement('div');
+      imgWrap.className = 'wa-bubble-image';
+      const img = document.createElement('img');
+      img.src = msg.imageDataUrl;
+      img.alt = '';
+      imgWrap.appendChild(img);
+      bubble.appendChild(imgWrap);
+
+      if (msg.text && msg.text.length > 0) {
+        // Image + caption: caption holds the text and the meta at its end
+        const caption = document.createElement('div');
+        caption.className = 'wa-bubble-caption';
+        caption.appendChild(document.createTextNode(msg.text));
+        caption.appendChild(meta);
+        bubble.appendChild(caption);
+      } else {
+        // Image only: meta overlaid in bottom-right with dark backdrop
+        bubble.classList.add('image-only');
+        bubble.appendChild(meta);
+      }
+    } else {
+      // Plain text bubble (existing behavior)
+      bubble.appendChild(document.createTextNode(msg.text));
+      bubble.appendChild(meta);
+    }
+
+    if (ticks) {
       // Realistic 3-stage progression: sent → delivered → read
       scheduleTick(() => { ticks.textContent = '✓✓'; }, 350);
       scheduleTick(() => { ticks.classList.add('read'); }, 1100);
     }
-    bubble.appendChild(meta);
+
     waMessages.appendChild(bubble);
     scrollChatToEnd();
     return bubble;
@@ -346,19 +388,31 @@
 
   async function runMe(msg) {
     busy = true;
-    await showKeyboard();
-    if (abort) { busy = false; return; }
-    await typeOut(msg.text);
-    if (abort) { busy = false; return; }
-    setSendable(true);
-    busy = false;
-    // Next click sends
-    pendingClickAction = () => sendMe(msg);
+    if (msg.text && msg.text.length > 0) {
+      // Text or image+caption: animate the keyboard typing of the caption, then wait for the send tap
+      await showKeyboard();
+      if (abort) { busy = false; return; }
+      await typeOut(msg.text);
+      if (abort) { busy = false; return; }
+      setSendable(true);
+      busy = false;
+      pendingClickAction = () => sendMe(msg);
+    } else {
+      // Image-only outgoing message: one tap = send immediately (no keyboard, no caption)
+      await hideKeyboard();
+      if (abort) { busy = false; return; }
+      addBubble('me', msg);
+      await waitMs(BUBBLE_ANIM_MS);
+      if (abort) { busy = false; return; }
+      i++;
+      busy = false;
+      prepareNext();
+    }
   }
 
   async function sendMe(msg) {
     busy = true;
-    addBubble('me', msg.text);
+    addBubble('me', msg);
     clearInputField();
     setSendable(false);
     await waitMs(BUBBLE_ANIM_MS);
@@ -374,11 +428,14 @@
     if (abort) { busy = false; return; }
     setHeaderTyping(true);
     const typingBubble = addTypingBubble();
-    const delay = Math.min(THEM_MAX_DELAY, THEM_BASE_DELAY + msg.text.length * THEM_PER_CHAR);
+    // For images add a fixed "uploading" delay on top of the text-based one
+    const imageDelay = msg.imageDataUrl ? 900 : 0;
+    const textDelay  = (msg.text || '').length * THEM_PER_CHAR;
+    const delay = Math.min(THEM_MAX_DELAY, THEM_BASE_DELAY + imageDelay + textDelay);
     await waitMs(delay);
     if (abort) { busy = false; return; }
     typingBubble.remove();
-    addBubble('them', msg.text);
+    addBubble('them', msg);
     setHeaderTyping(false);
     await waitMs(BUBBLE_ANIM_MS);
     if (abort) { busy = false; return; }

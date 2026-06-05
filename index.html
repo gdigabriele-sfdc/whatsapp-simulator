@@ -72,6 +72,28 @@
   </main>
 
   <!-- ============================= -->
+  <!-- MODALE: ISTRUZIONI PRIMA DI AVVIARE LA SIMULAZIONE -->
+  <!-- ============================= -->
+  <div class="modal-overlay" id="simIntroModal" aria-hidden="true">
+    <div class="modal" role="dialog" aria-labelledby="simIntroTitle" aria-describedby="simIntroDesc">
+      <h2 id="simIntroTitle">Pronto per iniziare?</h2>
+      <p id="simIntroDesc">
+        Durante la simulazione vedrai solo l'iPhone. Usa la tastiera per navigare:
+      </p>
+      <ul class="key-hints">
+        <li><kbd>→</kbd><span>Avanza alla prossima azione</span></li>
+        <li><kbd>←</kbd><span>Annulla l'azione in corso o torna al messaggio precedente</span></li>
+        <li><kbd>R</kbd><span>Riavvia la conversazione dall'inizio</span></li>
+        <li><kbd>Esc</kbd><span>Torna alla schermata di configurazione</span></li>
+      </ul>
+      <div class="modal-actions">
+        <button type="button" id="simIntroCancel" class="btn btn-ghost">Annulla</button>
+        <button type="button" id="simIntroStart" class="btn btn-primary">Iniziamo</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================= -->
   <!-- VISTA: SIMULATORE             -->
   <!-- ============================= -->
   <section id="simulatorView" class="simulator-view" aria-hidden="true">

@@ -9,6 +9,8 @@
 
   const MAX_AVATAR_DIMENSION = 256;
   const MAX_AVATAR_BYTES = 600 * 1024;
+  const MAX_MESSAGE_IMAGE_DIMENSION = 1200;
+  const MAX_MESSAGE_IMAGE_BYTES = 1.5 * 1024 * 1024;
 
   const EMOJI_CATEGORIES = [
     {
@@ -44,6 +46,7 @@
   let startBtn, exportBtn, importBtn, importInput, resetAllBtn;
   let configStatus;
   let backToConfigBtn;
+  let simIntroModal, simIntroStartBtn, simIntroCancelBtn;
 
   let emojiPickerEl = null;
   let emojiPickerGridEl = null;
@@ -74,6 +77,9 @@
     resetAllBtn    = document.getElementById('resetAllBtn');
     configStatus   = document.getElementById('configStatus');
     backToConfigBtn = document.getElementById('backToConfigBtn');
+    simIntroModal     = document.getElementById('simIntroModal');
+    simIntroStartBtn  = document.getElementById('simIntroStart');
+    simIntroCancelBtn = document.getElementById('simIntroCancel');
   }
 
   function bindEvents() {
@@ -114,11 +120,19 @@
         flash('Aggiungi almeno un messaggio prima di avviare.', true);
         return;
       }
-      const hasEmpty = scenario.messages.some((m) => !m.text.trim());
+      // A message is "empty" if it has no caption AND no image
+      const hasEmpty = scenario.messages.some((m) => !m.text.trim() && !m.imageDataUrl);
       if (hasEmpty) {
-        flash('Ci sono messaggi vuoti. Compilali o rimuovili prima di avviare.', true);
+        flash('Ci sono messaggi vuoti (senza testo né immagine). Compilali o rimuovili prima di avviare.', true);
         return;
       }
+      openSimIntroModal();
+    });
+
+    backToConfigBtn.addEventListener('click', exitSimulator);
+
+    simIntroStartBtn.addEventListener('click', () => {
+      closeSimIntroModal();
       persist();
       document.body.classList.add('view-simulator');
       document.getElementById('simulatorView').setAttribute('aria-hidden', 'false');
@@ -126,13 +140,16 @@
       if (global.WASimulator) global.WASimulator.start(scenario);
     });
 
-    backToConfigBtn.addEventListener('click', () => {
-      document.body.classList.remove('view-simulator');
-      document.getElementById('simulatorView').setAttribute('aria-hidden', 'true');
-      document.getElementById('configView').setAttribute('aria-hidden', 'false');
-      if (global.WASimulator) global.WASimulator.stop();
-      scenario = global.WAStorage.load();
-      renderAll();
+    simIntroCancelBtn.addEventListener('click', closeSimIntroModal);
+    simIntroModal.addEventListener('click', (e) => {
+      // Click on the dimmed backdrop (outside the modal box) closes the modal
+      if (e.target === simIntroModal) closeSimIntroModal();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (simIntroModal.classList.contains('is-open') && e.key === 'Escape') {
+        e.preventDefault();
+        closeSimIntroModal();
+      }
     });
 
     exportBtn.addEventListener('click', exportJson);
@@ -180,14 +197,44 @@
         renderMessages();
       });
 
+      // Content cell: optional image preview at top + textarea below
+      const content = document.createElement('div');
+      content.className = 'msg-content';
+
+      const imagePreview = document.createElement('div');
+      imagePreview.className = 'msg-image-preview' + (msg.imageDataUrl ? '' : ' is-empty');
+      if (msg.imageDataUrl) {
+        const thumb = document.createElement('img');
+        thumb.src = msg.imageDataUrl;
+        thumb.alt = 'Anteprima immagine';
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'msg-image-remove';
+        removeBtn.title = 'Rimuovi immagine';
+        removeBtn.textContent = '✕';
+        removeBtn.addEventListener('click', () => {
+          scenario.messages[idx].imageDataUrl = null;
+          persist();
+          renderMessages();
+        });
+        imagePreview.append(thumb, removeBtn);
+      }
+
       const textarea = document.createElement('textarea');
       textarea.value = msg.text;
       textarea.rows = 2;
-      textarea.placeholder = msg.sender === 'me' ? 'Quello che scrivi tu...' : 'Quello che ti scrivono...';
+      if (msg.imageDataUrl) {
+        textarea.placeholder = 'Didascalia (opzionale)...';
+      } else {
+        textarea.placeholder = msg.sender === 'me' ? 'Quello che scrivi tu...' : 'Quello che ti scrivono...';
+      }
       textarea.addEventListener('input', () => {
         scenario.messages[idx].text = textarea.value;
         persist();
       });
+
+      if (msg.imageDataUrl) content.appendChild(imagePreview);
+      content.appendChild(textarea);
 
       const actions = document.createElement('div');
       actions.className = 'msg-actions';
@@ -233,8 +280,21 @@
         }
       });
 
-      actions.append(emojiBtn, upBtn, downBtn, delBtn);
-      li.append(toggle, textarea, actions);
+      // Image picker (per-row hidden input + button)
+      const imageBtn = document.createElement('button');
+      imageBtn.type = 'button';
+      imageBtn.className = 'icon-btn image-btn';
+      imageBtn.title = msg.imageDataUrl ? 'Cambia immagine' : 'Aggiungi immagine';
+      imageBtn.textContent = '📷';
+      const imageFileInput = document.createElement('input');
+      imageFileInput.type = 'file';
+      imageFileInput.accept = 'image/*';
+      imageFileInput.hidden = true;
+      imageBtn.addEventListener('click', () => imageFileInput.click());
+      imageFileInput.addEventListener('change', (e) => onMessageImageSelected(e, idx));
+
+      actions.append(emojiBtn, imageBtn, upBtn, downBtn, delBtn);
+      li.append(toggle, content, actions, imageFileInput);
       messagesList.appendChild(li);
     });
 
@@ -485,5 +545,68 @@
     textarea.dispatchEvent(new Event('input', { bubbles: true }));
   }
 
-  global.WAConfig = { init };
+  /* ---------- Message-image upload ---------- */
+
+  function onMessageImageSelected(e, idx) {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      flash('Il file selezionato non è un\'immagine.', true);
+      e.target.value = '';
+      return;
+    }
+    resizeImageToDataUrl(file, MAX_MESSAGE_IMAGE_DIMENSION)
+      .then((dataUrl) => {
+        if (dataUrl.length > MAX_MESSAGE_IMAGE_BYTES * 1.4) {
+          flash('Immagine troppo grande anche dopo la compressione. Scegline una più leggera.', true);
+          return;
+        }
+        scenario.messages[idx].imageDataUrl = dataUrl;
+        try {
+          persist();
+        } catch (err) {
+          // Likely exceeded localStorage quota
+          scenario.messages[idx].imageDataUrl = null;
+          flash('Spazio insufficiente: rimuovi qualche immagine prima di aggiungerne altre.', true);
+          renderMessages();
+          return;
+        }
+        renderMessages();
+        flash('Immagine aggiunta al messaggio.');
+      })
+      .catch((err) => {
+        console.error(err);
+        flash('Impossibile leggere l\'immagine.', true);
+      })
+      .finally(() => { e.target.value = ''; });
+  }
+
+  /* ---------- Pre-simulation intro modal ---------- */
+
+  function openSimIntroModal() {
+    if (!simIntroModal) return;
+    simIntroModal.classList.add('is-open');
+    simIntroModal.setAttribute('aria-hidden', 'false');
+    // Focus the primary action so Enter starts the simulation
+    setTimeout(() => simIntroStartBtn && simIntroStartBtn.focus(), 30);
+  }
+
+  function closeSimIntroModal() {
+    if (!simIntroModal) return;
+    simIntroModal.classList.remove('is-open');
+    simIntroModal.setAttribute('aria-hidden', 'true');
+  }
+
+  /* ---------- Exit from simulator back to config (called by Esc key too) ---------- */
+
+  function exitSimulator() {
+    if (global.WASimulator) global.WASimulator.stop();
+    document.body.classList.remove('view-simulator');
+    document.getElementById('simulatorView').setAttribute('aria-hidden', 'true');
+    document.getElementById('configView').setAttribute('aria-hidden', 'false');
+    scenario = global.WAStorage.load();
+    renderAll();
+  }
+
+  global.WAConfig = { init, exitSimulator };
 })(window);
