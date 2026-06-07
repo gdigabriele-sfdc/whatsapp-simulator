@@ -565,6 +565,49 @@ body.view-simulator {
   align-items: center;
 }
 
+.actions-row.examples-row {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid #edf0f3;
+}
+
+.example-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1 1 320px;
+  min-width: 240px;
+}
+
+.example-picker > span {
+  font-size: 13px;
+  font-weight: 600;
+  color: #4a5568;
+}
+
+.example-picker select {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  padding: 10px 36px 10px 12px;
+  border: 1px solid #d9dee4;
+  border-radius: 8px;
+  background-color: #ffffff;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8' width='12' height='8'><path d='M1 1.5 L6 6.5 L11 1.5' stroke='%237b8794' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  font-size: 14px;
+  color: #1f2933;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.example-picker select:focus {
+  outline: none;
+  border-color: #00a884;
+  box-shadow: 0 0 0 3px rgba(0, 168, 132, 0.18);
+}
+
 .config-status {
   margin: 12px 0 0;
   font-size: 13px;

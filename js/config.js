@@ -44,7 +44,8 @@
   let nameInput, statusInput, avatarInput, avatarImg, avatarResetBtn;
   let phoneClockInput;
   let messagesList, addMessageBtn;
-  let startBtn, exportBtn, importBtn, importInput, resetAllBtn;
+  let startBtn, exportBtn, importBtn, importInput;
+  let exampleSelect;
   let configStatus;
   let backToConfigBtn;
   let simIntroModal, simIntroStartBtn, simIntroCancelBtn;
@@ -76,8 +77,9 @@
     exportBtn      = document.getElementById('exportBtn');
     importBtn      = document.getElementById('importBtn');
     importInput    = document.getElementById('importInput');
-    resetAllBtn    = document.getElementById('resetAllBtn');
+    exampleSelect  = document.getElementById('exampleSelect');
     configStatus   = document.getElementById('configStatus');
+    populateExamples();
     backToConfigBtn = document.getElementById('backToConfigBtn');
     simIntroModal     = document.getElementById('simIntroModal');
     simIntroStartBtn  = document.getElementById('simIntroStart');
@@ -168,13 +170,45 @@
     importBtn.addEventListener('click', () => importInput.click());
     importInput.addEventListener('change', importJson);
 
-    resetAllBtn.addEventListener('click', () => {
-      if (!confirm('Ripristinare lo scenario di esempio? Tutte le modifiche andranno perse.')) return;
-      scenario = global.WAStorage.reset();
-      global.WAStorage.save(scenario);
-      renderAll();
-      flash('Scenario di esempio ripristinato.');
+    if (exampleSelect) {
+      exampleSelect.addEventListener('change', onExampleSelected);
+    }
+  }
+
+  function populateExamples() {
+    if (!exampleSelect || !global.WAExamples) return;
+    // Keep the first "placeholder" option already present in the HTML
+    global.WAExamples.LIST.forEach((ex) => {
+      const opt = document.createElement('option');
+      opt.value = ex.id;
+      opt.textContent = ex.label;
+      exampleSelect.appendChild(opt);
     });
+  }
+
+  function onExampleSelected() {
+    const id = exampleSelect.value;
+    if (!id) return;
+    const example = global.WAExamples && global.WAExamples.get(id);
+    if (!example) {
+      flash('Esempio non trovato.', true);
+      exampleSelect.value = '';
+      return;
+    }
+    const label = exampleSelect.options[exampleSelect.selectedIndex].textContent;
+    const ok = confirm(
+      'Caricare l\'esempio "' + label + '"?\n\n' +
+      'La conversazione corrente verrà sostituita. Esporta prima il JSON se vuoi conservarla.'
+    );
+    if (!ok) {
+      exampleSelect.value = '';
+      return;
+    }
+    scenario = example;
+    global.WAStorage.save(scenario);
+    renderAll();
+    flash('Esempio "' + label + '" caricato.');
+    exampleSelect.value = '';
   }
 
   function renderAll() {
