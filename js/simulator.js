@@ -29,6 +29,7 @@
   let timeouts = [];
   let kbVisible = false;
   let defaultStatus = 'online';
+  let customClock = null;
 
   /* ---------- DOM refs ---------- */
 
@@ -109,10 +110,16 @@
     stop(); // clear any prior state
     abort = false;
     messages = scenario.messages.slice();
+    // Apply custom clock if the scenario provides one (empty string -> auto)
+    if (typeof scenario.clock === 'string') {
+      const t = scenario.clock.trim();
+      customClock = t ? t : null;
+    }
     applyContact(scenario.contact);
     resetChat();
     i = 0;
     prepareNext();
+    updateClock();
   }
 
   function stop() {
@@ -214,7 +221,7 @@
     if (sender === 'me') {
       ticks = document.createElement('span');
       ticks.className = 'wa-ticks';
-      ticks.textContent = '✓';
+      ticks.innerHTML = tickSvg(false);
       meta.appendChild(ticks);
     }
 
@@ -247,8 +254,8 @@
     }
 
     if (ticks) {
-      // Realistic 3-stage progression: sent → delivered → read
-      scheduleTick(() => { ticks.textContent = '✓✓'; }, 350);
+      // Realistic 3-stage progression: sent (✓) → delivered (✓✓ gray) → read (✓✓ blue)
+      scheduleTick(() => { ticks.innerHTML = tickSvg(true); }, 350);
       scheduleTick(() => { ticks.classList.add('read'); }, 1100);
     }
 
@@ -326,6 +333,10 @@
   /* ---------- Time helpers ---------- */
 
   function updateClock() {
+    if (customClock) {
+      iosTime.textContent = customClock;
+      return;
+    }
     const d = new Date();
     const hh = d.getHours();
     const mm = d.getMinutes().toString().padStart(2, '0');
@@ -337,6 +348,20 @@
     const hh = d.getHours().toString().padStart(2, '0');
     const mm = d.getMinutes().toString().padStart(2, '0');
     return `${hh}:${mm}`;
+  }
+
+  // WhatsApp-style ticks. Two check marks horizontally offset so the second one
+  // overlaps the right half of the first, matching iOS WhatsApp visuals.
+  function tickSvg(isDouble) {
+    if (isDouble) {
+      return '<svg viewBox="0 0 16 11" width="16" height="11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+        + '<path d="M1 6 L4.3 9.2 L9.6 2.4" />'
+        + '<path d="M6.2 6 L9.5 9.2 L14.8 2.4" />'
+        + '</svg>';
+    }
+    return '<svg viewBox="0 0 11 11" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+      + '<path d="M1 6 L4.3 9.2 L9.8 2.4" />'
+      + '</svg>';
   }
 
   /* ---------- Async helpers (abortable) ---------- */

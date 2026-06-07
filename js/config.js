@@ -42,6 +42,7 @@
   let scenario = null;
 
   let nameInput, statusInput, avatarInput, avatarImg, avatarResetBtn;
+  let phoneClockInput;
   let messagesList, addMessageBtn;
   let startBtn, exportBtn, importBtn, importInput, resetAllBtn;
   let configStatus;
@@ -68,6 +69,7 @@
     avatarInput    = document.getElementById('avatarInput');
     avatarImg      = document.getElementById('avatarImg');
     avatarResetBtn = document.getElementById('avatarResetBtn');
+    phoneClockInput = document.getElementById('phoneClock');
     messagesList   = document.getElementById('messagesList');
     addMessageBtn  = document.getElementById('addMessageBtn');
     startBtn       = document.getElementById('startBtn');
@@ -92,6 +94,13 @@
       scenario.contact.status = statusInput.value;
       persist();
     });
+
+    if (phoneClockInput) {
+      phoneClockInput.addEventListener('input', () => {
+        scenario.clock = phoneClockInput.value;
+        persist();
+      });
+    }
 
     avatarInput.addEventListener('change', onAvatarFileSelected);
     avatarResetBtn.addEventListener('click', () => {
@@ -169,6 +178,7 @@
     nameInput.value   = scenario.contact.name || '';
     statusInput.value = scenario.contact.status || '';
     avatarImg.src = scenario.contact.avatarDataUrl || 'assets/default-avatar.svg';
+    if (phoneClockInput) phoneClockInput.value = scenario.clock || '';
     renderMessages();
   }
 

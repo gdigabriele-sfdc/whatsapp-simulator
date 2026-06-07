@@ -13,6 +13,7 @@
       status: 'online',
       avatarDataUrl: null
     },
+    clock: '',
     messages: [
       { sender: 'them', text: 'Ciao! Come va?' },
       { sender: 'me',   text: 'Ciao Anna! Tutto bene, tu?' },
@@ -33,6 +34,7 @@
     if (!s.contact || typeof s.contact !== 'object') return false;
     if (typeof s.contact.name !== 'string') return false;
     if (!Array.isArray(s.messages)) return false;
+    if (s.clock != null && typeof s.clock !== 'string') return false;
     return s.messages.every((m) => {
       if (!m) return false;
       if (m.sender !== 'me' && m.sender !== 'them') return false;
@@ -59,6 +61,7 @@
       if (!isValidScenario(parsed)) return clone(DEFAULT_SCENARIO);
       if (typeof parsed.contact.status !== 'string') parsed.contact.status = 'online';
       if (typeof parsed.contact.avatarDataUrl === 'undefined') parsed.contact.avatarDataUrl = null;
+      if (typeof parsed.clock !== 'string') parsed.clock = '';
       return parsed;
     } catch (err) {
       console.warn('Impossibile leggere lo scenario salvato, uso il default.', err);
