@@ -146,6 +146,9 @@
       document.body.classList.add('view-simulator');
       document.getElementById('simulatorView').setAttribute('aria-hidden', 'false');
       document.getElementById('configView').setAttribute('aria-hidden', 'true');
+      // Reset scroll so the iPhone is centered in the viewport regardless of
+      // where the user clicked the start button from in the config page.
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
       if (global.WASimulator) global.WASimulator.start(scenario);
     });
 
@@ -616,6 +619,9 @@
     document.getElementById('configView').setAttribute('aria-hidden', 'false');
     scenario = global.WAStorage.load();
     renderAll();
+    // Land at the top of the config page rather than wherever the user was
+    // scrolled within the simulator view.
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
   }
 
   global.WAConfig = { init, exitSimulator };
